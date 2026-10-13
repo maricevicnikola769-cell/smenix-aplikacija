@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Smenix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: time-clock card — today's status on top, month grid as a punch card, schedule editor below */
+:root{
+  --bg:#eef0f3; --surface:#ffffff; --fg:#1c2230; --muted:#5e6678; --line:#d5d9e1; --accent:#1c2230;
+  --d:#f2a516; --d-ink:#3d2900; --p:#e4643a; --p-ink:#fff;
+  --n:#3a3f9c; --n-ink:#fff; --s:#dfe9df; --s-ink:#2c5a33;
+  --g:#2f8f6b; --g-ink:#fff; --b:#b9475e; --b-ink:#fff;
+  --i1:#f6d84c; --i2:#2a8fbf; --i3:#6a3f9e;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#13161d; --surface:#1c2029; --fg:#e9ecf2; --muted:#9aa2b3; --line:#2e3441; --accent:#e9ecf2;
+  --s:#22332a; --s-ink:#9fd3a8; --n:#5a60c9; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#13161d; --surface:#1c2029; --fg:#e9ecf2; --muted:#9aa2b3; --line:#2e3441; --accent:#e9ecf2;
+  --s:#22332a; --s-ink:#9fd3a8; --n:#5a60c9; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;padding:16px}
+.wrap{max-width:720px;margin:0 auto;display:grid;gap:12px}
+h1,h2{font-family:var(--display);margin:0;letter-spacing:.01em;text-wrap:balance}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.t-D{background:var(--d);color:var(--d-ink)} .t-P{background:var(--p);color:var(--p-ink)}
+.t-N{background:var(--n);color:var(--n-ink)} .t-S{background:var(--s);color:var(--s-ink)}
+.t-G{background:var(--g);color:var(--g-ink)} .t-I1{background:var(--i1);color:#3a2f00} .t-I2{background:var(--i2);color:#fff} .t-I3{background:var(--i3);color:#fff} .t-E{background:var(--bg);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)} .t-B{background:var(--b);color:var(--b-ink)}
+
+.today{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:grid;grid-template-columns:auto 1fr}
+.today .big{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;display:grid;place-items:center;padding:10px 16px;min-width:70px}
+.today .info{padding:8px 14px;display:grid;gap:1px;min-width:0}
+.today h1{font-size:22px;line-height:1.1}
+.today .next{color:var(--muted);font-size:13px}
+.today .next b{color:var(--fg);font-weight:600}
+
+.strip{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.strip div{flex:0 0 46px;border-radius:8px;text-align:center;padding:6px 0;font-family:var(--mono);font-size:12px}
+.strip strong{display:block;font-family:var(--display);font-size:20px;line-height:1.1}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px}
+.mhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mhead h2{font-size:24px;text-transform:capitalize}
+.btn{font:inherit;font-weight:600;background:transparent;color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--muted)}
+.btn:focus-visible,.cell:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.solid{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dow{font-size:11px;text-align:center;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.cell{height:clamp(40px,8.5vh,64px);max-width:100%;border:0;border-radius:7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px;font:inherit;position:relative}
+.cell .n{font-family:var(--display);font-weight:700;font-size:19px;line-height:1}
+.cell .c{font-family:var(--mono);font-size:10px;line-height:1;opacity:.85}
+.cell.out{visibility:hidden}
+.cell.now{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--fg)}
+.cell.ov::after{content:"";position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:currentColor}
+.stats{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px}
+.stats span{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+.pattern{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:0;border-radius:8px;width:44px;height:48px;font-family:var(--display);font-weight:800;font-size:22px;cursor:pointer;display:grid;place-items:center;position:relative}
+.chip small{position:absolute;bottom:2px;font-family:var(--mono);font-size:9px;font-weight:500;opacity:.8}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=date]{font:inherit;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:40px;max-width:100%}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.field{display:grid;gap:6px}
+
+.sheet{position:fixed;inset:auto 0 0 0;background:var(--surface);border-top:1px solid var(--line);padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 30px rgba(0,0,0,.18);display:grid;gap:12px;z-index:5}
+.sheet .opts{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.sheet .opt{border:0;border-radius:9px;padding:12px;font:inherit;font-weight:600;cursor:pointer;text-align:left}
+.sheet h2{font-size:24px}
+.sheet{max-height:88vh;overflow-y:auto}
+.evform{display:grid;grid-template-columns:1fr auto;gap:8px}
+.evform input:not([type]),.evform select{grid-column:1/-1}
+.evform input,.evform select{font:inherit;background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:40px;min-width:0}
+.evlist{display:grid;gap:6px}
+.ev-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:9px}
+.ev-row .tm{font-family:var(--display);font-weight:700;font-size:20px;font-variant-numeric:tabular-nums}
+.ev-row .tx{min-width:0;overflow-wrap:anywhere}
+.ev-row small{display:block;color:var(--muted);font-size:12px}
+.ev-row .del{min-height:34px;padding:4px 10px}
+.cell.ev::before{content:"";position:absolute;top:4px;left:50%;transform:translateX(-50%);width:14px;height:3px;border-radius:2px;background:currentColor}
+.alarm{position:fixed;inset:0 0 auto 0;z-index:9;background:var(--fg);color:var(--bg);padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.alarm .inner{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.alarm .label{color:inherit;opacity:.75} .alarm h2{font-size:26px}
+.alarm .btn{color:var(--bg);border-color:var(--bg)}
+.inner{max-width:720px;margin:0 auto;width:100%;display:grid;gap:12px}
+.cell.out{height:0}
+.stats{font-size:13px;gap:4px 12px}
+@media (prefers-reduced-motion:no-preference){.cell,.chip{transition:transform .12s}.cell:active,.chip:active{transform:scale(.94)}}
+</style>
+
+<div class="wrap">
+  <section class="today" id="today"></section>
+
+  <section class="card">
+    <div class="mhead">
+      <button class="btn" id="prev" aria-label="Prethodni mesec">‹</button>
+      <h2 id="mtitle"></h2>
+      <button class="btn" id="next" aria-label="Sledeći mesec">›</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <div class="stats" id="stats"></div>
+    <div class="row">
+      <button class="btn solid" id="cont">Nastavi istim redom</button>
+      <button class="btn" id="clear">Obriši sve</button>
+    </div>
+    <p class="hint" id="clearMsg"></p>
+  </section>
+
+  <section class="card">
+    <h2 style="font-size:26px">Naredni događaji</h2>
+    <div class="evlist" id="evList"></div>
+    <p class="hint">Dodirni dan u kalendaru da dodaš događaj. Podsetnik iskače i zvoni dok je Smenix otvoren.</p>
+    <div class="row" id="icsAll" hidden><button class="btn solid" data-ics="all">Svi događaji u kalendar telefona</button></div>
+    <p class="hint" id="icsHint" hidden>Dugme „Alarm“ prebacuje događaj u kalendar telefona, sa podsetnikom koji zvoni i kad je Smenix zatvoren. Otvori preuzeti fajl i potvrdi dodavanje.</p>
+  </section>
+
+  <section class="card">
+    <h2 style="font-size:26px">Moj ritam smena</h2>
+    <div class="field">
+      <label class="label" for="preset">Gotov raspored</label>
+      <select id="preset">
+        <option value="">Izaberi…</option>
+        <option value="none">Bez ritma (upisujem ručno)</option>
+        <option value="D,N,S,S">Dan, noć, 2 slobodna (12/24 – 12/48)</option>
+        <option value="D,D,N,N,S,S,S,S">2 dana, 2 noći, 4 slobodna</option>
+        <option value="D,D,P,P,N,N,S,S,S,S">2 dana, 2 popodne, 2 noći, 4 slobodna</option>
+        <option value="I1,I1,I1,I1,I1,S,S,I2,I2,I2,I2,I2,S,S,I3,I3,I3,I3,I3,S,S">Prva, druga, treća (8 h), nedeljna rotacija</option>
+        <option value="I1,I1,I1,I1,I1,S,S,I2,I2,I2,I2,I2,S,S">Prva i druga (8 h), nedeljna rotacija</option>
+        <option value="I1,I1,I2,I2,I3,I3,S,S">2 prve, 2 druge, 2 treće, 2 slobodna (8 h)</option>
+        <option value="I1,I1,I1,I1,I1,S,S">Samo prva smena, ponedeljak–petak</option>
+        <option value="D,D,D,D,D,S,S">Ponedeljak–petak</option>
+      </select>
+    </div>
+    <div class="field">
+      <span class="label">Ciklus (dodirni smenu da je promeniš)</span>
+      <div class="pattern" id="pattern"></div>
+      <div class="row">
+        <button class="btn" id="add">+ Dodaj dan</button>
+        <button class="btn" id="remove">− Ukloni poslednji</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="start">Prvi dan ciklusa</label>
+      <input type="date" id="start">
+      <p class="hint">Datum kada si radio(la) prvu smenu iz ciklusa iznad. Za nedeljne rotacije izaberi ponedeljak.</p>
+    </div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="inner">
+    <div class="mhead"><h2 id="sTitle"></h2><button class="btn" id="sClose">Zatvori</button></div>
+    <div class="opts" id="sOpts"></div>
+    <div class="field">
+      <span class="label">Događaji ovog dana</span>
+      <div class="evlist" id="sEvents"></div>
+      <form class="evform" id="evForm">
+        <input id="evTitle" placeholder="Šta imaš (npr. zubar, sastanak)" maxlength="60" required>
+        <input type="time" id="evTime" value="09:00" required aria-label="Vreme">
+        <select id="evRemind" aria-label="Kada da te podseti">
+          <option value="0">Podseti u vreme događaja</option>
+          <option value="10">Podseti 10 min pre</option>
+          <option value="30" selected>Podseti 30 min pre</option>
+          <option value="60">Podseti 1 sat pre</option>
+          <option value="120">Podseti 2 sata pre</option>
+          <option value="1440">Podseti 1 dan pre</option>
+        </select>
+        <button class="btn solid" type="submit">Dodaj događaj</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="alarm" id="alarm" hidden role="alert">
+  <div class="inner"><div><span class="label" id="aWhen"></span><h2 id="aTitle"></h2></div><button class="btn" id="aOk">U redu</button></div>
+</div>
+
+<script>
+const T={D:'Dnevna smena',P:'Popodnevna smena',N:'Noćna smena',S:'Slobodan dan',G:'Godišnji odmor',B:'Bolovanje',E:'Nije upisano'};
+const CYCLE=['I1','I2','I3','D','P','N','S'];
+T.I1='Prva smena (8 h)';T.I2='Druga smena (8 h)';T.I3='Treća smena (8 h)';
+const L=t=>t==='E'?'&nbsp;':t[0]==='I'?t[1]:t;
+const MON=['januar','februar','mart','april','maj','jun','jul','avgust','septembar','oktobar','novembar','decembar'];
+const MONG=['januara','februara','marta','aprila','maja','juna','jula','avgusta','septembra','oktobra','novembra','decembra'];
+const DOW=['nedelja','ponedeljak','utorak','sreda','četvrtak','petak','subota'];
+const DOWS=['Ned','Pon','Uto','Sre','Čet','Pet','Sub'];
+
+const now=new Date();
+const pad=n=>String(n).padStart(2,'0');
+const keyOf=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const num=k=>{const[y,m,d]=k.split('-').map(Number);return Date.UTC(y,m-1,d)/864e5};
+const addDays=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const todayD=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+
+let st={pattern:[],start:keyOf(todayD),overrides:{}};
+try{const s=JSON.parse(localStorage.getItem('sihter2'));if(s&&Array.isArray(s.pattern))st=s}catch(e){}
+st.events=st.events||[];st.fired=st.fired||{};
+const STANDALONE=false; // u Android aplikaciji preuzimanje .ics fajla ne radi, pa je dugme „Alarm“ skriveno
+function icsFor(list){
+  const f=d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  const x=s=>String(s).replace(/[\\;,]/g,c=>'\\'+c).replace(/\n/g,' ');
+  const now=new Date(),stamp=new Date(now.getTime()+now.getTimezoneOffset()*6e4);
+  let out='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Smenix//SR\r\nCALSCALE:GREGORIAN\r\n';
+  for(const e of list){const s=evAt(e),en=new Date(s.getTime()+36e5);
+    out+='BEGIN:VEVENT\r\nUID:'+e.id+'@sihter\r\nDTSTAMP:'+f(stamp)+'Z\r\nDTSTART:'+f(s)+'\r\nDTEND:'+f(en)+'\r\nSUMMARY:'+x(e.title)+'\r\n'+
+      'BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:'+x(e.title)+'\r\nTRIGGER:-PT'+e.remind+'M\r\nEND:VALARM\r\nEND:VEVENT\r\n'}
+  return out+'END:VCALENDAR\r\n'}
+function dlIcs(list,name){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([icsFor(list)],{type:'text/calendar'}));a.download=name+'.ics';
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-ics]');if(!b)return;
+  if(b.dataset.ics==='all'){const up=st.events.filter(e=>evAt(e)>Date.now());if(up.length)dlIcs(up,'smenix-dogadjaji');return}
+  const e=st.events.find(x=>x.id===b.dataset.ics);if(e)dlIcs([e],'smenix-'+e.date)});
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const RL={0:'u vreme događaja',10:'10 min pre',30:'30 min pre',60:'1 sat pre',120:'2 sata pre',1440:'1 dan pre'};
+const evAt=e=>{const[y,m,d]=e.date.split('-').map(Number),[h,mi]=e.time.split(':').map(Number);return new Date(y,m-1,d,h,mi)};
+const evSort=(a,b)=>evAt(a)-evAt(b);
+const evRow=e=>'<div class="ev-row"><span class="tm">'+e.time+'</span><span class="tx">'+esc(e.title)+'<small>'+nice(evAt(e))+' · podsetnik '+RL[e.remind]+'</small></span><span class="row" style="gap:6px">'+(STANDALONE?'<button class="btn del" data-ics="'+e.id+'">Alarm</button>':'')+'<button class="btn del" data-del="'+e.id+'" aria-label="Obriši događaj">Obriši</button></span></div>';
+const save=()=>{try{localStorage.setItem('sihter2',JSON.stringify(st))}catch(e){}};
+let view=new Date(todayD.getFullYear(),todayD.getMonth(),1);
+
+function planned(k){const n=st.pattern.length;if(!n)return 'E';const i=num(k)-num(st.start);return st.pattern[((i%n)+n)%n]}
+function typeOf(k){return st.overrides[k]||planned(k)}
+const isFree=t=>t==='S'||t==='G'||t==='B';
+const nice=d=>DOW[d.getDay()]+' '+d.getDate()+'. '+MONG[d.getMonth()];
+
+function renderToday(){
+  const k=keyOf(todayD),t=typeOf(k);
+  let msg=t==='E'?'Dodirni dan u kalendaru da upišeš smenu.':'';
+  if(t!=='E')for(let i=1;i<400;i++){const d=addDays(todayD,i),tt=typeOf(keyOf(d));if(tt==='E')continue;
+    if(isFree(t)?!isFree(tt):isFree(tt)){msg=(isFree(t)?'Sledeći radni dan: ':'Sledeći slobodan dan: ')+'<b>'+nice(d)+'</b> ('+(i===1?'sutra':'za '+i+' dana')+')';break}}
+  const tm=typeOf(keyOf(addDays(todayD,1)));
+  document.getElementById('today').innerHTML=
+    '<div class="big t-'+t+'">'+(t==='E'?'–':L(t))+'</div><div class="info"><span class="label">Danas, '+nice(todayD)+'</span><h1>'+T[t]+'</h1>'+
+    '<div class="next">Sutra: <b>'+T[tm].toLowerCase()+'</b></div><div class="next">'+msg+'</div></div>';
+}
+function renderMonth(){
+  const y=view.getFullYear(),m=view.getMonth();
+  document.getElementById('mtitle').textContent=MON[m]+' '+y;
+  let h=['Pon','Uto','Sre','Čet','Pet','Sub','Ned'].map(x=>'<div class="dow">'+x+'</div>').join('');
+  const off=(new Date(y,m,1).getDay()+6)%7, days=new Date(y,m+1,0).getDate();
+  for(let i=0;i<off;i++)h+='<div class="cell out"></div>';
+  const evDays=new Set(st.events.map(e=>e.date));
+  const cnt={I1:0,I2:0,I3:0,D:0,P:0,N:0,S:0,G:0,B:0,E:0},tk=keyOf(todayD);
+  for(let d=1;d<=days;d++){const k=y+'-'+pad(m+1)+'-'+pad(d),t=typeOf(k);cnt[t]++;
+    h+='<button class="cell t-'+t+(k===tk?' now':'')+(st.overrides[k]?' ov':'')+(evDays.has(k)?' ev':'')+'" data-k="'+k+'" aria-label="'+d+'. '+MONG[m]+': '+T[t]+'"><span class="n">'+d+'</span><span class="c">'+L(t)+'</span></button>'}
+  document.getElementById('grid').innerHTML=h;
+  const work=cnt.D+cnt.P+cnt.N+cnt.I1+cnt.I2+cnt.I3;
+  document.getElementById('stats').innerHTML='<span><b>'+work+'</b>&nbsp;radnih</span>'+
+    Object.keys(cnt).filter(t=>cnt[t]&&t!=='E').map(t=>'<span><i class="dot t-'+t+'"></i>'+T[t].split(' ')[0]+': '+cnt[t]+'</span>').join('');
+}
+function renderPattern(){
+  document.getElementById('pattern').innerHTML=st.pattern.length?'':'<p class="hint">Nema ritma. Smene upisuješ ručno u kalendaru, ili izaberi gotov raspored iznad.</p>';
+  document.getElementById('pattern').innerHTML+=st.pattern.map((t,i)=>
+    '<button class="chip t-'+t+'" data-i="'+i+'" aria-label="Dan '+(i+1)+': '+T[t]+'">'+L(t)+'<small>'+(i+1)+'</small></button>').join('');
+  document.getElementById('start').value=st.start;
+}
+function renderEvents(){
+  const now=Date.now(),up=st.events.filter(e=>evAt(e)>now-36e5).sort(evSort);
+  document.getElementById('evList').innerHTML=up.length?up.slice(0,10).map(evRow).join(''):'<p class="hint">Nema zakazanih događaja.</p>';
+  const td=st.events.filter(e=>e.date===keyOf(todayD)).sort(evSort);
+  if(td.length){const div=document.createElement('div');div.className='next';
+    div.innerHTML='Danas: '+td.map(e=>'<b>'+e.time+' '+esc(e.title)+'</b>').join(', ');document.querySelector('#today .info').appendChild(div)}
+  if(sk&&!sheet.hidden)renderSheetEvents();
+}
+function renderSheetEvents(){const l=st.events.filter(e=>e.date===sk).sort(evSort);
+  document.getElementById('sEvents').innerHTML=l.length?l.map(evRow).join(''):'<p class="hint">Još nema događaja za ovaj dan.</p>'}
+function all(){renderToday();renderMonth();renderPattern();renderEvents();save()}
+
+document.getElementById('prev').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()-1,1);renderMonth()};
+document.getElementById('next').onclick=()=>{view=new Date(view.getFullYear(),view.getMonth()+1,1);renderMonth()};
+document.getElementById('pattern').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const i=+b.dataset.i;
+  st.pattern[i]=CYCLE[(CYCLE.indexOf(st.pattern[i])+1)%CYCLE.length];document.getElementById('preset').value='';all()};
+document.getElementById('add').onclick=()=>{st.pattern.push('D');all()};
+document.getElementById('remove').onclick=()=>{if(st.pattern.length){st.pattern.pop();all()}};
+document.getElementById('preset').onchange=e=>{const v=e.target.value;if(v){st.pattern=v==='none'?[]:v.split(',');all()}};
+document.getElementById('start').onchange=e=>{if(e.target.value){st.start=e.target.value;all()}};
+let armed=false,armT;
+const msgEl=document.getElementById('clearMsg');
+document.getElementById('clear').onclick=()=>{
+  if(!armed){armed=true;msgEl.textContent='Ovo briše sve upisane smene i ritam. Dodirni „Obriši sve“ ponovo da potvrdiš.';
+    clearTimeout(armT);armT=setTimeout(()=>{armed=false;msgEl.textContent=''},5000);return}
+  st.overrides={};st.pattern=[];armed=false;document.getElementById('preset').value='';msgEl.textContent='Kalendar je ispražnjen.';all()};
+document.getElementById('cont').onclick=()=>{
+  const ks=Object.keys(st.overrides).sort();
+  if(ks.length<2){msgEl.textContent='Prvo upiši bar dva dana zaredom (npr. jedan ceo krug smena), pa dodirni „Nastavi istim redom“.';return}
+  const a=num(ks[0]),b=num(ks[ks.length-1]);
+  if(b-a>120){msgEl.textContent='Upisani dani su predaleko jedan od drugog. Upiši jedan krug smena zaredom.';return}
+  const pat=[];
+  for(let i=a;i<=b;i++){const d=new Date(i*864e5),k=d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());pat.push(st.overrides[k]||'S')}
+  st.pattern=pat;st.start=ks[0];st.overrides={};document.getElementById('preset').value='';
+  msgEl.textContent='Redosled od '+pat.length+' dana se sada ponavlja dalje u kalendaru.';all()};
+
+const sheet=document.getElementById('sheet');let sk=null;
+document.getElementById('grid').onclick=e=>{const c=e.target.closest('.cell[data-k]');if(!c)return;sk=c.dataset.k;
+  const[y,m,d]=sk.split('-').map(Number),p=planned(sk);
+  document.getElementById('sTitle').textContent=nice(new Date(y,m-1,d));
+  document.getElementById('sOpts').innerHTML='<button class="opt t-'+p+'" data-t="">'+(p==='E'?'Prazno':'Po rasporedu ('+T[p].toLowerCase()+')')+'</button>'+
+    ['I1','I2','I3','D','P','N','S','G','B'].filter(t=>t!==p).map(t=>'<button class="opt t-'+t+'" data-t="'+t+'">'+T[t]+'</button>').join('');
+  sheet.hidden=false;renderSheetEvents();document.querySelector('#sOpts .opt').focus()};
+document.getElementById('evForm').addEventListener('submit',e=>{e.preventDefault();
+  const t=document.getElementById('evTitle'),tm=document.getElementById('evTime').value;if(!t.value.trim()||!tm)return;
+  st.events.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:sk,time:tm,title:t.value.trim(),remind:+document.getElementById('evRemind').value});
+  t.value='';all();renderSheetEvents();check()});
+document.addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;
+  st.events=st.events.filter(x=>x.id!==b.dataset.del);delete st.fired[b.dataset.del];all();if(!sheet.hidden)renderSheetEvents()});
+
+let actx=null;
+document.addEventListener('pointerdown',()=>{if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}},{once:true});
+function beep(){if(!actx)return;try{actx.resume();const t0=actx.currentTime;
+  for(let i=0;i<3;i++){const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=880;o.connect(g);g.connect(actx.destination);
+    g.gain.setValueAtTime(.0001,t0+i*.45);g.gain.exponentialRampToValueAtTime(.3,t0+i*.45+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+i*.45+.35);
+    o.start(t0+i*.45);o.stop(t0+i*.45+.4)}}catch(e){}}
+const alarm=document.getElementById('alarm');
+function check(){const now=Date.now();
+  for(const e of st.events){const at=evAt(e).getTime();
+    if(!st.fired[e.id]&&now>=at-e.remind*6e4&&now<at+30*6e4){st.fired[e.id]=1;save();
+      const mins=Math.round((at-now)/6e4);
+      document.getElementById('aWhen').textContent=mins>0?'Za '+(mins>=120?Math.round(mins/60)+' h':mins+' min')+', u '+e.time:'Sada, u '+e.time;
+      document.getElementById('aTitle').textContent=e.title;alarm.hidden=false;beep();break}}}
+document.getElementById('aOk').onclick=()=>alarm.hidden=true;
+setInterval(()=>{check();renderEvents()},20000);
+setTimeout(check,500);
+if(STANDALONE){document.getElementById('icsAll').hidden=false;document.getElementById('icsHint').hidden=false}
+document.getElementById('sOpts').onclick=e=>{const b=e.target.closest('.opt');if(!b)return;
+  if(b.dataset.t)st.overrides[sk]=b.dataset.t;else delete st.overrides[sk];sheet.hidden=true;all()};
+document.getElementById('sClose').onclick=()=>sheet.hidden=true;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')sheet.hidden=true});
+all();
+</script>
+
+</body>
+</html>
